@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import pprint
+import re
 
 
 def pars_readmanga(url: str):
@@ -55,9 +56,10 @@ def pars_mangalib(url: str):
 
 
 def pars_title(link, readmanga=True, mangalib=False):
-    if readmanga:
-        response = requests.get(link)
-        soup = BeautifulSoup(response.content, "lxml")
+    f = open('title.txt','rb') 
+    content = f.read() 
+    soup = BeautifulSoup(content, "lxml")
+    if readmanga:   
         title_name = soup.find("meta", itemprop="name")['content'] \
             if soup.find("meta", itemprop="name") else None
         genres = {el.a.text for el in soup.body(
@@ -79,8 +81,6 @@ def pars_title(link, readmanga=True, mangalib=False):
         return {'title_name': title_name, 'genres': genres, 'category': category, 'year': year, 
             'status_process': status_process, 'status_readed': status_readed, 'status_loved': status_loved}
     elif mangalib:
-        response = requests.get(link)
-        soup = BeautifulSoup(response.content, "lxml")
         title_name = soup.find("meta", itemprop="name")['content'] \
             if soup.find("meta", itemprop="name") else None
         for info in soup.body("div", {"class": "info-list__row"}):
@@ -93,12 +93,22 @@ def pars_title(link, readmanga=True, mangalib=False):
             elif info_name == "Жанры":
                 genres = {el.text for el in info.findAll("a")}
             elif info_name == "Просмотров":
-                number_of_views = info_value
-        return {'title_name': title_name, 'genres': genres, 'category': category, 'year': year, 'number_of_views': number_of_views}
+                views_count = info_value
+        bookmarks_count_text = soup.body.find("h3", {"class": "aside__title"})
+        bookmarks_count = re.match(r"\(.*?\)", bookmarks_count_text)[1:-1]
+        return {'title_name': title_name, 'genres': genres, 'category': category, 'year': year, 'views_count': views_count}
+
+    
+def save_title_file(link):
+    response = requests.get(link)
+    f = open('title.txt','wb') 
+    print(response.content)
+    f.write(response.content)
 
 
 if __name__ == '__main__':
     # pars_readmanga('https://readmanga.live/list?sortType=created')
     # pars_mangalib('https://mangalib.me/manga-list?sort=created_at&dir=desc&page=')
+    save_title_file('https://mangalib.me/ilwojil-su-eobsneun-manyeoui-somang')
     pprint.pprint(pars_title(
-        'https://mangalib.me/17-plus-4'))
+        'https://mangalib.me/ilwojil-su-eobsneun-manyeoui-somang', False, True))
